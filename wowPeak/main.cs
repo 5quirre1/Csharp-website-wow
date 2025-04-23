@@ -1,22 +1,32 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Hosting;
-using System.Threading;
 using Microsoft.AspNetCore.Http;
 using System.IO;
 
 class Program
 {
-    private static string counterFile = Path.Combine("/data", "viewcount.txt");
+    private static string counterFile = "viewcount.txt";
+    private static readonly object lockObj = new object();
 
     private static int SwagCountThing()
     {
         int count = 0;
-        if (File.Exists(counterFile))
+        lock (lockObj)
         {
-            count = int.Parse(File.ReadAllText(counterFile));
+            if (File.Exists(counterFile))
+            {
+                if (int.TryParse(File.ReadAllText(counterFile), out count))
+                {
+                }
+                else
+                {
+                    count = 0;
+                }
+            }
+
+            count++;
+            File.WriteAllText(counterFile, count.ToString());
         }
-        count++;
-        File.WriteAllText(counterFile, count.ToString());
         return count;
     }
 
@@ -42,8 +52,6 @@ class Program
             ");
         });
 
-        var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
-        app.Run($"http://0.0.0.0:{port}");
-
+        app.Run("http://0.0.0.0:5000");
     }
 }
